@@ -14,8 +14,12 @@ namespace GoogleHashCode
         private int _time;
 
         private IList<Library> _libraries;
-
         private ICollection<Library> _scannedLibraries;
+
+        private string _outputFilePath => Path.GetFullPath(Path.Combine(
+            $"{Directory.GetParent(_filePath).FullName}",
+            $"..{Path.DirectorySeparatorChar}..{Path.DirectorySeparatorChar}..{Path.DirectorySeparatorChar}..{Path.DirectorySeparatorChar}" +
+                $"Outputs{Path.DirectorySeparatorChar}output_{Path.GetFileName(_filePath)}"));
 
         public BookManager(string filePath)
         {
@@ -31,6 +35,7 @@ namespace GoogleHashCode
 
             _libraries.ForEach(l => l.OrderBooksByScore());
             _scannedLibraries = _libraries.Where(l => l.IsSignedUp).Select(l => new Library(l)).ToList();
+
             while (t < _time)
             {
                 ScanBooks();
@@ -134,7 +139,7 @@ namespace GoogleHashCode
 
             EnsureEmptyLine(firstLine);
 
-            var books = new List<Book>();
+            var books = new List<Book>(numberOfBooks);
 
             var secondLine = file.NextLine();
             for (int i = 0; i < numberOfBooks; ++i)
@@ -167,20 +172,27 @@ namespace GoogleHashCode
             }
         }
 
+        private static void EnsureEmptyLine(IParsedLine firstLine)
+        {
+            if (!firstLine.Empty)
+            {
+                throw new ArgumentException("Error parsing file");
+            }
+        }
+
         private void PrintResult()
         {
-            string fileName = $"output_{Path.GetFileName(_filePath)}";
-            string outputFilePath = Path.GetFullPath(Path.Combine($"{Directory.GetParent(_filePath).FullName}", $"..//..//..//../Outputs//{fileName}"));
-
-            Console.WriteLine($"Writing output to {outputFilePath}");
+            Console.WriteLine($"Writing output to {_outputFilePath}");
 
 #pragma warning disable S2930 // "IDisposables" should be disposed - Sonar doesn't know about C# 8 features
-            using StreamWriter sw = new StreamWriter(outputFilePath, append: false);
+            using StreamWriter sw = new StreamWriter(_outputFilePath, append: false);
 #pragma warning restore S2930 // "IDisposables" should be disposed
 
-            sw.WriteLine(_scannedLibraries.Count(l => l.Books.Any()));
+            var librariesWithBooks = _scannedLibraries.Where(l => l.Books.Any()).ToList();
 
-            foreach (var lib in _scannedLibraries.Where(l => l.Books.Any()))
+            sw.WriteLine(librariesWithBooks.Count);
+
+            foreach (var lib in librariesWithBooks)
             {
                 sw.WriteLine($"{lib.Index} {lib.Books.Count}");
                 foreach (var book in lib.Books.Take(lib.Books.Count - 1))
@@ -190,14 +202,6 @@ namespace GoogleHashCode
                 }
 
                 sw.WriteLine(lib.Books.Last().Index);
-            }
-        }
-
-        private static void EnsureEmptyLine(IParsedLine firstLine)
-        {
-            if (!firstLine.Empty)
-            {
-                throw new ArgumentException("Error parsing file");
             }
         }
     }
