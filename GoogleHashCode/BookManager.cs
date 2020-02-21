@@ -53,7 +53,8 @@ namespace GoogleHashCode
             if (signingUpLibIndex == -1)
             {
                 var libToSignUp = SelectLibToSignUpWithMaxNumberOfTheoreticallyScannableBooks(currentTime);
-                // For set c, better use SelectLibToSignUpWithMininumSignupTime(currentTime)
+                //var libToSignUp = SelectLibToSignUpWithMaxNumberOfTheoreticalScore(currentTime); // d
+                //var libToSignUp = SelectLibToSignUpWithMininumSignupTime();    // c
 
                 return libToSignUp != null
                     ? SignUpProcess(libToSignUp)
@@ -79,7 +80,7 @@ namespace GoogleHashCode
         }
 
         /// <summary>
-        /// Works better with all input sets but c
+        /// Works better with input sets e and f
         /// </summary>
         /// <param name="currentTime"></param>
         /// <returns></returns>
@@ -93,6 +94,40 @@ namespace GoogleHashCode
                 candidateLibs.Any()
                     ? candidateLibs.MaxBy(l => l.ParallelBooks * (remainingTime - l.SignupTime)).FirstOrDefault()
                     : null;
+        }
+
+        /// <summary>
+        /// Works better with input set d
+        /// </summary>
+        /// <param name="currentTime"></param>
+        /// <returns></returns>
+        private Library SelectLibToSignUpWithMaxNumberOfTheoreticalScore(int currentTime)
+        {
+            var remainingTime = _time - currentTime;
+
+            var candidateLibs = _libraries.Where(l => !l.IsSignedUp);
+
+            var maxScore = -1;
+            Library chosenLib = null;
+
+            foreach (var lib in candidateLibs)
+            {
+                var scanTime = remainingTime - lib.SignupTime;
+                var bookSlots = Math.Min(lib.ParallelBooks * scanTime, lib.Books.Count);
+
+                var scores = lib.Books
+                    .Where(b => !b.IsScanned)
+                    .Take(bookSlots)
+                    .Sum(b => b.Score);
+
+                if (scores > maxScore)
+                {
+                    maxScore = scores;
+                    chosenLib = lib;
+                }
+            }
+
+            return chosenLib;
         }
 
         /// <summary>
